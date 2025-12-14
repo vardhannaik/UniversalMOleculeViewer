@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Molecular Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            max-width: 260px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        #controls h2 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            resize: vertical;
+        }
+        select, input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin: 3px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            width: 100%;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.active {
+            background: #2196F3;
+        }
+        button.secondary {
+            background: #666;
+        }
+        button.secondary:hover {
+            background: #555;
+        }
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            backdrop-filter: blur(10px);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        #viewControls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            max-width: 260px;
+        }
+        .preset {
+            background: #666;
+            margin: 5px 0;
+        }
+        .preset:hover {
+            background: #555;
+        }
+        label {
+            display: block;
+            margin: 8px 0 4px 0;
+            font-size: 13px;
+            color: white;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            margin: 6px 0;
+            background: #34495e;
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4CAF50;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #4CAF50;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+        h3 {
+            color: #4CAF50;
+            font-size: 14px;
+            margin: 12px 0 8px 0;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 4px;
+        }
+        span {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .info {
+            font-size: 11px;
+            color: #aaa;
+            margin: 8px 0;
+        }
+        #molInfo {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+        #molInfo h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h2>🧪 Universal Molecular Visualizer</h2>
+        
+        <label>Input Format:</label>
+        <select id="formatSelect" onchange="updatePlaceholder()">
+            <option value="xyz">XYZ Format</option>
+            <option value="smiles">SMILES</option>
+            <option value="json">JSON Format</option>
+        </select>
+        
+        <label>Molecular Data:</label>
+        <textarea id="moleculeInput" placeholder="Paste molecular data here..."></textarea>
+        
+        <button onclick="loadMolecule()">Load Molecule</button>
+        <button class="preset" onclick="loadPreset('water')">Load Water (H₂O)</button>
+        <button class="preset" onclick="loadPreset('methane')">Load Methane (CH₄)</button>
+        <button class="preset" onclick="loadPreset('benzene')">Load Benzene (C₆H₆)</button>
+        <button class="preset" onclick="loadPreset('ethanol')">Load Ethanol (C₂H₅OH)</button>
+        <button class="preset" onclick="loadPreset('caffeine')">Load Caffeine</button>
+        <button class="preset" onclick="loadPreset('glucose')">Load Glucose</button>
+        
+        <h3 style="margin-top: 20px; color: #4CAF50;">Crystal Lattice Settings</h3>
+        
+        <label>X-axis Repeat: <span id="xValue">1</span></label>
+        <input type="range" id="xRepeat" min="1" max="5" value="1" oninput="updateLattice()">
+        
+        <label>Y-axis Repeat: <span id="yValue">1</span></label>
+        <input type="range" id="yRepeat" min="1" max="5" value="1" oninput="updateLattice()">
+        
+        <label>Z-axis Repeat (Layers): <span id="zValue">1</span></label>
+        <input type="range" id="zRepeat" min="1" max="5" value="1" oninput="updateLattice()">
+        
+        <label>Spacing (Å): <span id="spacingValue">5.0</span></label>
+        <input type="range" id="spacing" min="3" max="15" step="0.5" value="5.0" oninput="updateLattice()">
+        
+        <button onclick="resetLattice()">Reset to Single Molecule</button>
+        
+        <div class="info">
+            <p><strong>Supported Formats:</strong></p>
+            <p>• XYZ: Standard coordinate format</p>
+            <p>• JSON: Custom format with atoms and bonds</p>
+            <p>• SMILES: Simple molecular input (basic)</p>
+        </div>
+    </div>
+
+    <div class="legend">
+        <h3 style="margin-top: 0;">Atom Colors (CPK)</h3>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #FFFFFF;"></div>
+            <span>Hydrogen (H)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #909090;"></div>
+            <span>Carbon (C)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #3050F8;"></div>
+            <span>Nitrogen (N)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #FF0D0D;"></div>
+            <span>Oxygen (O)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #FFFF30;"></div>
+            <span>Sulfur (S)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #1FF01F;"></div>
+            <span>Chlorine (Cl)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #FFA500;"></div>
+            <span>Phosphorus (P)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #A020F0;"></div>
+            <span>Other</span>
+        </div>
+    </div>
+
+    <div id="viewControls">
+        <button onclick="toggleRotation()">Auto-Rotate</button>
+        <button onclick="resetView()">Reset</button>
+        <button onclick="toggleLabels()">Labels</button>
+        <button onclick="toggleAngles()" id="angleBtn">Angles</button>
+        <button onclick="toggleBondLengths()" id="bondBtn">Bonds</button>
+        <button onclick="zoomIn()">Zoom + </button>
+        <button onclick="zoomOut()">Zoom - </button>
+    </div>
+
+    <div id="molInfo">
+        <h3>Molecule Info</h3>
+        <p id="molFormula">-</p>
+        <p id="molAtoms">-</p>
+        <p id="molBonds">-</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, molecule;
+        let autoRotate = true;
+        let labelSprites = [];
+        let showLabels = true;
+        let angleSprites = [];
+        let angleArcs = [];
+        let showAngles = false;
+        let bondLengthLabels = [];
+        let showBondLengths = false;
+
+        let currentAtoms = [];
+        let currentBonds = [];
+        let xRepeat = 1;
+        let yRepeat = 1;
+        let zRepeat = 1;
+        let latticeSpacing = 5.0;
+
+        // CPK color scheme for atoms - Complete periodic table
+        const atomColors = {
+            // Period 1
+            'H': 0xFFFFFF,   // Hydrogen - White
+            'He': 0xD9FFFF,  // Helium - Cyan
+            
+            // Period 2
+            'Li': 0xCC80FF,  // Lithium - Violet
+            'Be': 0xC2FF00,  // Beryllium - Green
+            'B': 0xFFB5B5,   // Boron - Pink
+            'C': 0x909090,   // Carbon - Gray
+            'N': 0x3050F8,   // Nitrogen - Blue
+            'O': 0xFF0D0D,   // Oxygen - Red
+            'F': 0x90E050,   // Fluorine - Light Green
+            'Ne': 0xB3E3F5,  // Neon - Light Blue
+            
+            // Period 3
+            'Na': 0xAB5CF2,  // Sodium - Purple
+            'Mg': 0x8AFF00,  // Magnesium - Green
+            'Al': 0xBFA6A6,  // Aluminum - Gray
+            'Si': 0xF0C8A0,  // Silicon - Tan
+            'P': 0xFFA500,   // Phosphorus - Orange
+            'S': 0xFFFF30,   // Sulfur - Yellow
+            'Cl': 0x1FF01F,  // Chlorine - Green
+            'Ar': 0x80D1E3,  // Argon - Light Blue
+            
+            // Period 4
+            'K': 0x8F40D4,   // Potassium - Purple
+            'Ca': 0x3DFF00,  // Calcium - Green
+            'Sc': 0xE6E6E6,  // Scandium - Gray
+            'Ti': 0xBFC2C7,  // Titanium - Gray
+            'V': 0xA6A6AB,   // Vanadium - Gray
+            'Cr': 0x8A99C7,  // Chromium - Gray
+            'Mn': 0x9C7AC7,  // Manganese - Gray
+            'Fe': 0xE06633,  // Iron - Orange
+            'Co': 0xF090A0,  // Cobalt - Pink
+            'Ni': 0x50D050,  // Nickel - Green
+            'Cu': 0xC88033,  // Copper - Orange
+            'Zn': 0x7D80B0,  // Zinc - Blue-Gray
+            'Ga': 0xC28F8F,  // Gallium - Gray
+            'Ge': 0x668F8F,  // Germanium - Gray
+            'As': 0xBD80E3,  // Arsenic - Purple
+            'Se': 0xFFA100,  // Selenium - Orange
+            'Br': 0xA62929,  // Bromine - Dark Red
+            'Kr': 0x5CB8D1,  // Krypton - Light Blue
+            
+            // Period 5
+            'Rb': 0x702EB0,  // Rubidium - Purple
+            'Sr': 0x00FF00,  // Strontium - Green
+            'Y': 0x94FFFF,   // Yttrium - Cyan
+            'Zr': 0x94E0E0,  // Zirconium - Cyan
+            'Nb': 0x73C2C9,  // Niobium - Cyan
+            'Mo': 0x54B5B5,  // Molybdenum - Cyan
+            'Tc': 0x3B9E9E,  // Technetium - Cyan
+            'Ru': 0x248F8F,  // Ruthenium - Cyan
+            'Rh': 0x0A7D8C,  // Rhodium - Cyan
+            'Pd': 0x006985,  // Palladium - Cyan
+            'Ag': 0xC0C0C0,  // Silver - Silver
+            'Cd': 0xFFD98F,  // Cadmium - Yellow
+            'In': 0xA67573,  // Indium - Gray
+            'Sn': 0x668080,  // Tin - Gray
+            'Sb': 0x9E63B5,  // Antimony - Purple
+            'Te': 0xD47A00,  // Tellurium - Orange
+            'I': 0x940094,   // Iodine - Purple
+            'Xe': 0x429EB0,  // Xenon - Cyan
+            
+            // Period 6
+            'Cs': 0x57178F,  // Cesium - Purple
+            'Ba': 0x00C900,  // Barium - Green
+            'La': 0x70D4FF,  // Lanthanum - Light Blue
+            'Ce': 0xFFFFC7,  // Cerium - Yellow
+            'Pr': 0xD9FFC7,  // Praseodymium - Green
+            'Nd': 0xC7FFC7,  // Neodymium - Green
+            'Pm': 0xA3FFC7,  // Promethium - Green
+            'Sm': 0x8FFFC7,  // Samarium - Green
+            'Eu': 0x61FFC7,  // Europium - Green
+            'Gd': 0x45FFC7,  // Gadolinium - Green
+            'Tb': 0x30FFC7,  // Terbium - Green
+            'Dy': 0x1FFFC7,  // Dysprosium - Green
+            'Ho': 0x00FF9C,  // Holmium - Green
+            'Er': 0x00E675,  // Erbium - Green
+            'Tm': 0x00D452,  // Thulium - Green
+            'Yb': 0x00BF38,  // Ytterbium - Green
+            'Lu': 0x00AB24,  // Lutetium - Green
+            'Hf': 0x4DC2FF,  // Hafnium - Blue
+            'Ta': 0x4DA6FF,  // Tantalum - Blue
+            'W': 0x2194D6,   // Tungsten - Blue
+            'Re': 0x267DAB,  // Rhenium - Blue
+            'Os': 0x266696,  // Osmium - Blue
+            'Ir': 0x175487,  // Iridium - Blue
+            'Pt': 0xD0D0E0,  // Platinum - Silver
+            'Au': 0xFFD123,  // Gold - Gold
+            'Hg': 0xB8B8D0,  // Mercury - Silver
+            'Tl': 0xA6544D,  // Thallium - Gray
+            'Pb': 0x575961,  // Lead - Gray
+            'Bi': 0x9E4FB5,  // Bismuth - Purple
+            'Po': 0xAB5C00,  // Polonium - Brown
+            'At': 0x754F45,  // Astatine - Brown
+            'Rn': 0x428296,  // Radon - Blue
+            
+            // Period 7
+            'Fr': 0x420066,  // Francium - Purple
+            'Ra': 0x007D00,  // Radium - Green
+            'Ac': 0x70ABFA,  // Actinium - Blue
+            'Th': 0x00BAFF,  // Thorium - Blue
+            'Pa': 0x00A1FF,  // Protactinium - Blue
+            'U': 0x008FFF,   // Uranium - Blue
+            'Np': 0x0080FF,  // Neptunium - Blue
+            'Pu': 0x006BFF,  // Plutonium - Blue
+            'Am': 0x545CF2,  // Americium - Blue
+            'Cm': 0x785CE3,  // Curium - Purple
+            'Bk': 0x8A4FE3,  // Berkelium - Purple
+            'Cf': 0xA136D4,  // Californium - Purple
+            'Es': 0xB31FD4,  // Einsteinium - Purple
+            
+            'DEFAULT': 0xA020F0  // Unknown - Purple
+        };
+
+        // Van der Waals radii (in Angstroms) for visualization
+        const atomSizes = {
+            // Period 1
+            'H': 0.10,   'He': 0.12,
+            
+            // Period 2
+            'Li': 0.15,  'Be': 0.13,  'B': 0.17,  'C': 0.18,
+            'N': 0.17,   'O': 0.16,   'F': 0.15,  'Ne': 0.15,
+            
+            // Period 3
+            'Na': 0.19,  'Mg': 0.17,  'Al': 0.18, 'Si': 0.21,
+            'P': 0.19,   'S': 0.20,   'Cl': 0.20, 'Ar': 0.19,
+            
+            // Period 4
+            'K': 0.23,   'Ca': 0.20,  'Sc': 0.21, 'Ti': 0.20,
+            'V': 0.20,   'Cr': 0.20,  'Mn': 0.20, 'Fe': 0.20,
+            'Co': 0.19,  'Ni': 0.19,  'Cu': 0.19, 'Zn': 0.19,
+            'Ga': 0.19,  'Ge': 0.20,  'As': 0.20, 'Se': 0.20,
+            'Br': 0.22,  'Kr': 0.20,
+            
+            // Period 5
+            'Rb': 0.25,  'Sr': 0.22,  'Y': 0.22,  'Zr': 0.21,
+            'Nb': 0.21,  'Mo': 0.21,  'Tc': 0.21, 'Ru': 0.21,
+            'Rh': 0.20,  'Pd': 0.21,  'Ag': 0.21, 'Cd': 0.22,
+            'In': 0.22,  'Sn': 0.22,  'Sb': 0.22, 'Te': 0.23,
+            'I': 0.24,   'Xe': 0.22,
+            
+            // Period 6
+            'Cs': 0.27,  'Ba': 0.24,  'La': 0.24, 'Ce': 0.23,
+            'Pr': 0.24,  'Nd': 0.24,  'Pm': 0.24, 'Sm': 0.24,
+            'Eu': 0.25,  'Gd': 0.23,  'Tb': 0.23, 'Dy': 0.23,
+            'Ho': 0.23,  'Er': 0.23,  'Tm': 0.23, 'Yb': 0.23,
+            'Lu': 0.23,  'Hf': 0.21,  'Ta': 0.21, 'W': 0.21,
+            'Re': 0.21,  'Os': 0.21,  'Ir': 0.21, 'Pt': 0.21,
+            'Au': 0.21,  'Hg': 0.22,  'Tl': 0.22, 'Pb': 0.23,
+            'Bi': 0.23,  'Po': 0.23,  'At': 0.23, 'Rn': 0.23,
+            
+            // Period 7
+            'Fr': 0.28,  'Ra': 0.25,  'Ac': 0.24, 'Th': 0.24,
+            'Pa': 0.24,  'U': 0.24,   'Np': 0.24, 'Pu': 0.24,
+            'Am': 0.24,  'Cm': 0.24,  'Bk': 0.24, 'Cf': 0.24,
+            'Es': 0.24,
+            
+            'DEFAULT': 0.18
+        };
+
+        // Preset molecules
+        const presets = {
+            water: {
+                atoms: [
+                    { element: 'O', x: 0.0000, y: 0.0000, z: 0.0000 },
+                    { element: 'H', x: 0.7570, y: 0.5860, z: 0.0000 },
+                    { element: 'H', x: -0.7570, y: 0.5860, z: 0.0000 }
+                ],
+                bonds: [[0, 1], [0, 2]]
+            },
+            methane: {
+                atoms: [
+                    { element: 'C', x: 0.0000, y: 0.0000, z: 0.0000 },
+                    { element: 'H', x: 0.6276, y: 0.6276, z: 0.6276 },
+                    { element: 'H', x: -0.6276, y: -0.6276, z: 0.6276 },
+                    { element: 'H', x: -0.6276, y: 0.6276, z: -0.6276 },
+                    { element: 'H', x: 0.6276, y: -0.6276, z: -0.6276 }
+                ],
+                bonds: [[0, 1], [0, 2], [0, 3], [0, 4]]
+            },
+            benzene: {
+                atoms: [
+                    { element: 'C', x: 1.2124, y: 0.7002, z: 0.0000 },
+                    { element: 'C', x: 1.2124, y: -0.7002, z: 0.0000 },
+                    { element: 'C', x: 0.0000, y: -1.4004, z: 0.0000 },
+                    { element: 'C', x: -1.2124, y: -0.7002, z: 0.0000 },
+                    { element: 'C', x: -1.2124, y: 0.7002, z: 0.0000 },
+                    { element: 'C', x: 0.0000, y: 1.4004, z: 0.0000 },
+                    { element: 'H', x: 2.1552, y: 1.2442, z: 0.0000 },
+                    { element: 'H', x: 2.1552, y: -1.2442, z: 0.0000 },
+                    { element: 'H', x: 0.0000, y: -2.4884, z: 0.0000 },
+                    { element: 'H', x: -2.1552, y: -1.2442, z: 0.0000 },
+                    { element: 'H', x: -2.1552, y: 1.2442, z: 0.0000 },
+                    { element: 'H', x: 0.0000, y: 2.4884, z: 0.0000 }
+                ],
+                bonds: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[0,6],[1,7],[2,8],[3,9],[4,10],[5,11]]
+            },
+            ethanol: {
+                atoms: [
+                    { element: 'C', x: 1.1879, y: -0.3417, z: 0.0000 },
+                    { element: 'C', x: 0.0000, y: 0.6019, z: 0.0000 },
+                    { element: 'O', x: -1.1867, y: -0.2072, z: 0.0000 },
+                    { element: 'H', x: -1.9237, y: 0.3970, z: 0.0000 },
+                    { element: 'H', x: 2.1244, y: 0.2306, z: 0.0000 },
+                    { element: 'H', x: 1.1852, y: -0.9691, z: 0.8900 },
+                    { element: 'H', x: 1.1852, y: -0.9691, z: -0.8900 },
+                    { element: 'H', x: 0.0200, y: 1.2506, z: 0.8900 },
+                    { element: 'H', x: 0.0200, y: 1.2506, z: -0.8900 }
+                ],
+                bonds: [[0,1],[1,2],[2,3],[0,4],[0,5],[0,6],[1,7],[1,8]]
+            },
+            caffeine: {
+                atoms: [
+                    { element: 'N', x: 1.3970, y: 0.2990, z: 0.0070 },
+                    { element: 'C', x: 0.7210, y: 1.4910, z: -0.0080 },
+                    { element: 'N', x: -0.6180, y: 1.5950, z: -0.0240 },
+                    { element: 'C', x: -1.3120, y: 0.4360, z: -0.0240 },
+                    { element: 'C', x: -0.5880, y: -0.7930, z: -0.0070 },
+                    { element: 'C', x: 0.8050, y: -0.8810, z: 0.0090 },
+                    { element: 'N', x: 1.2300, y: -2.1600, z: 0.0230 },
+                    { element: 'C', x: 0.0900, y: -2.9190, z: 0.0150 },
+                    { element: 'N', x: -1.0100, y: -2.0860, z: -0.0050 },
+                    { element: 'O', x: 1.4020, y: 2.5370, z: -0.0090 },
+                    { element: 'C', x: 2.8480, y: 0.1940, z: 0.0260 },
+                    { element: 'C', x: -2.4240, y: -2.5510, z: -0.0200 },
+                    { element: 'N', x: -2.6550, y: 0.4480, z: -0.0400 },
+                    { element: 'C', x: -3.4750, y: 1.6390, z: -0.0470 },
+                    { element: 'O', x: 0.0570, y: -4.1360, z: 0.0270 },
+                    { element: 'H', x: 3.2300, y: -0.3250, z: 0.8960 },
+                    { element: 'H', x: 3.2310, y: -0.3250, z: -0.8430 },
+                    { element: 'H', x: 3.2160, y: 1.2120, z: 0.0270 },
+                    { element: 'H', x: -2.8560, y: -2.2090, z: -0.9530 },
+                    { element: 'H', x: -2.8560, y: -2.2090, z: 0.9130 },
+                    { element: 'H', x: -2.5390, y: -3.6340, z: -0.0210 },
+                    { element: 'H', x: -3.1390, y: -0.4610, z: -0.0440 },
+                    { element: 'H', x: -4.5350, y: 1.3540, z: -0.0590 },
+                    { element: 'H', x: -3.2740, y: 2.2350, z: 0.8480 },
+                    { element: 'H', x: -3.2750, y: 2.2350, z: -0.9420 }
+                ],
+                bonds: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[5,6],[6,7],[7,8],[8,4],
+                        [1,9],[0,10],[8,11],[3,12],[12,13],[7,14],[10,15],[10,16],[10,17],
+                        [11,18],[11,19],[11,20],[12,21],[13,22],[13,23],[13,24]]
+            },
+            glucose: {
+                atoms: [
+                    { element: 'C', x: 1.1472, y: 0.3695, z: -0.2357 },
+                    { element: 'C', x: 0.0235, y: 1.3846, z: -0.0364 },
+                    { element: 'C', x: -1.2891, y: 0.7066, z: 0.3621 },
+                    { element: 'C', x: -1.0273, y: -0.2736, z: 1.5186 },
+                    { element: 'C', x: 0.0857, y: -1.2887, z: 1.1848 },
+                    { element: 'O', x: 1.3037, y: -0.5753, z: 0.8847 },
+                    { element: 'O', x: 0.4337, y: 2.3298, z: 0.9172 },
+                    { element: 'O', x: -2.2439, y: 1.7217, z: 0.7044 },
+                    { element: 'O', x: -2.2289, y: -1.0037, z: 1.8369 },
+                    { element: 'O', x: -0.3197, y: -2.0887, z: 0.0783 },
+                    { element: 'C', x: 2.4598, y: 1.0195, z: -0.6342 },
+                    { element: 'O', x: 3.4146, y: 0.0044, z: -0.9343 },
+                    { element: 'H', x: 0.7907, y: -0.2405, z: -1.0722 },
+                    { element: 'H', x: -0.1129, y: 1.9946, z: -0.9229 },
+                    { element: 'H', x: -1.6456, y: 0.0966, z: -0.4744 },
+                    { element: 'H', x: -0.6708, y: 0.3364, z: 2.3551 },
+                    { element: 'H', x: 0.2721, y: -1.8987, z: 2.0713 },
+                    { element: 'H', x: -0.2398, y: 2.9748, z: 0.6789 },
+                    { element: 'H', x: -2.4022, y: 2.2867, z: -0.0339 },
+                    { element: 'H', x: -2.9124, y: -0.3587, z: 2.0752 },
+                    { element: 'H', x: -0.4580, y: -2.9337, z: 0.4166 },
+                    { element: 'H', x: 2.8163, y: 1.6295, z: 0.2023 },
+                    { element: 'H', x: 2.3234, y: 1.6295, z: -1.5207 },
+                    { element: 'H', x: 4.2358, y: 0.4494, z: -1.1726 }
+                ],
+                bonds: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[1,6],[2,7],[3,8],[4,9],
+                        [0,10],[10,11],[0,12],[1,13],[2,14],[3,15],[4,16],[6,17],[7,18],
+                        [8,19],[9,20],[10,21],[10,22],[11,23]]
+            }
+        };
+
+        function updatePlaceholder() {
+            const format = document.getElementById('formatSelect').value;
+            const textarea = document.getElementById('moleculeInput');
+            
+            if (format === 'xyz') {
+                textarea.placeholder = `XYZ Format Example:
+3
+Water molecule
+O    0.0000    0.0000    0.0000
+H    0.7570    0.5860    0.0000
+H   -0.7570    0.5860    0.0000`;
+            } else if (format === 'json') {
+                textarea.placeholder = `JSON Format Example:
+{
+  "atoms": [
+    {"element": "O", "x": 0, "y": 0, "z": 0},
+    {"element": "H", "x": 0.757, "y": 0.586, "z": 0}
+  ],
+  "bonds": [[0, 1], [0, 2]]
+}`;
+            } else if (format === 'smiles') {
+                textarea.placeholder = `SMILES Examples:
+O - Water
+CC - Ethane
+CCO - Ethanol
+c1ccccc1 - Benzene
+CC(=O)O - Acetic acid
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C - Caffeine
+
+Note: Basic implementation`;
+            }
+        }
+
+        function parseXYZ(text) {
+            const lines = text.trim().split('\n');
+            const numAtoms = parseInt(lines[0]);
+            // Skip comment line
+            const atoms = [];
+            
+            for (let i = 2; i < 2 + numAtoms; i++) {
+                const parts = lines[i].trim().split(/\s+/);
+                atoms.push({
+                    element: parts[0],
+                    x: parseFloat(parts[1]),
+                    y: parseFloat(parts[2]),
+                    z: parseFloat(parts[3])
+                });
+            }
+            
+            // Auto-detect bonds based on distance
+            const bonds = detectBonds(atoms);
+            
+            return { atoms, bonds };
+        }
+
+        function parseSMILES(smiles) {
+            // Simple SMILES parser - handles basic organic molecules
+            const atoms = [];
+            const bonds = [];
+            let atomIndex = 0;
+            
+            // Parse SMILES string character by character
+            const atomPattern = /([A-Z][a-z]?|\[.*?\])/g;
+            const matches = smiles.match(atomPattern) || [];
+            
+            // For simple visualization, arrange atoms in a line or simple structure
+            // This is a basic implementation - real SMILES parsing would use RDKit or similar
+            
+            for (let i = 0; i < smiles.length; i++) {
+                const char = smiles[i];
+                
+                if (/[A-Z]/.test(char)) {
+                    let element = char;
+                    if (i + 1 < smiles.length && /[a-z]/.test(smiles[i + 1])) {
+                        element += smiles[i + 1];
+                        i++;
+                    }
+                    
+                    // Simple 3D positioning - spread atoms out
+                    const angle = (atomIndex * 2 * Math.PI) / Math.max(matches.length, 3);
+                    const radius = 1.5;
+                    
+                    atoms.push({
+                        element: element,
+                        x: radius * Math.cos(angle),
+                        y: radius * Math.sin(angle),
+                        z: atomIndex * 0.3 - matches.length * 0.15
+                    });
+                    
+                    // Connect to previous atom
+                    if (atomIndex > 0) {
+                        bonds.push([atomIndex - 1, atomIndex]);
+                    }
+                    
+                    atomIndex++;
+                }
+            }
+            
+            // Add hydrogens implicitly for common cases
+            const atomsWithH = addImplicitHydrogens(atoms, bonds);
+            
+            return { atoms: atomsWithH.atoms, bonds: atomsWithH.bonds };
+        }
+
+        function addImplicitHydrogens(atoms, bonds) {
+            // Simple hydrogen addition based on valency
+            const valency = {
+                'C': 4, 'N': 3, 'O': 2, 'S': 2, 'P': 3,
+                'F': 1, 'Cl': 1, 'Br': 1, 'I': 1
+            };
+            
+            const newAtoms = [...atoms];
+            const newBonds = [...bonds];
+            
+            atoms.forEach((atom, idx) => {
+                const maxBonds = valency[atom.element] || 0;
+                const currentBonds = bonds.filter(b => b.includes(idx)).length;
+                const hNeeded = Math.max(0, maxBonds - currentBonds);
+                
+                // Add hydrogens around the atom
+                for (let i = 0; i < hNeeded; i++) {
+                    const angle = (i * 2 * Math.PI) / hNeeded;
+                    const hIdx = newAtoms.length;
+                    
+                    newAtoms.push({
+                        element: 'H',
+                        x: atom.x + 0.5 * Math.cos(angle),
+                        y: atom.y + 0.5 * Math.sin(angle),
+                        z: atom.z + 0.3
+                    });
+                    
+                    newBonds.push([idx, hIdx]);
+                }
+            });
+            
+            return { atoms: newAtoms, bonds: newBonds };
+        }
+
+        function parseJSON(text) {
+            const data = JSON.parse(text);
+            return {
+                atoms: data.atoms,
+                bonds: data.bonds || detectBonds(data.atoms)
+            };
+        }
+
+        function detectBonds(atoms) {
+            const bonds = [];
+            const maxBondLength = {
+                'H': { 'H': 0.9, 'C': 1.2, 'N': 1.2, 'O': 1.1, 'S': 1.5, 'P': 1.5, 'DEFAULT': 1.3 },
+                'C': { 'C': 1.7, 'N': 1.6, 'O': 1.5, 'S': 1.9, 'P': 1.9, 'DEFAULT': 1.7 },
+                'N': { 'N': 1.6, 'O': 1.5, 'S': 1.8, 'P': 1.8, 'DEFAULT': 1.6 },
+                'O': { 'O': 1.5, 'S': 1.7, 'P': 1.7, 'DEFAULT': 1.5 },
+                'S': { 'S': 2.2, 'DEFAULT': 2.0 },
+                'P': { 'P': 2.3, 'DEFAULT': 2.0 },
+                'DEFAULT': { 'DEFAULT': 2.0 }
+            };
+            
+            for (let i = 0; i < atoms.length; i++) {
+                for (let j = i + 1; j < atoms.length; j++) {
+                    const dx = atoms[j].x - atoms[i].x;
+                    const dy = atoms[j].y - atoms[i].y;
+                    const dz = atoms[j].z - atoms[i].z;
+                    const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    
+                    const elem1 = atoms[i].element;
+                    const elem2 = atoms[j].element;
+                    
+                    const maxDist = (maxBondLength[elem1] && maxBondLength[elem1][elem2]) ||
+                                  (maxBondLength[elem2] && maxBondLength[elem2][elem1]) ||
+                                  maxBondLength['DEFAULT']['DEFAULT'];
+                    
+                    if (distance < maxDist) {
+                        bonds.push([i, j]);
+                    }
+                }
+            }
+            
+            return bonds;
+        }
+
+        function loadMolecule() {
+            const format = document.getElementById('formatSelect').value;
+            const input = document.getElementById('moleculeInput').value.trim();
+            
+            if (!input) {
+                alert('Please enter molecular data');
+                return;
+            }
+            
+            try {
+                let data;
+                if (format === 'xyz') {
+                    data = parseXYZ(input);
+                } else if (format === 'json') {
+                    data = parseJSON(input);
+                } else if (format === 'smiles') {
+                    data = parseSMILES(input);
+                }
+                
+                currentAtoms = data.atoms;
+                currentBonds = data.bonds;
+                
+                updateMoleculeInfo();
+                renderMolecule();
+            } catch (error) {
+                alert('Error parsing molecule: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function loadPreset(name) {
+            const preset = presets[name];
+            currentAtoms = preset.atoms;
+            currentBonds = preset.bonds;
+            
+            updateMoleculeInfo();
+            renderMolecule();
+        }
+
+        function updateMoleculeInfo() {
+            const elementCounts = {};
+            currentAtoms.forEach(atom => {
+                elementCounts[atom.element] = (elementCounts[atom.element] || 0) + 1;
+            });
+            
+            let formula = '';
+            Object.keys(elementCounts).sort().forEach(elem => {
+                formula += elem + (elementCounts[elem] > 1 ? elementCounts[elem] : '');
+            });
+            
+            document.getElementById('molFormula').textContent = 'Formula: ' + formula;
+            document.getElementById('molAtoms').textContent = 'Atoms: ' + currentAtoms.length;
+            document.getElementById('molBonds').textContent = 'Bonds: ' + currentBonds.length;
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 10;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(5, 5, 5);
+            scene.add(directionalLight1);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            directionalLight2.position.set(-5, -5, -5);
+            scene.add(directionalLight2);
+
+            molecule = new THREE.Group();
+            scene.add(molecule);
+
+            // Mouse controls
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                autoRotate = false;
+            });
+
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.offsetX - previousMousePosition.x,
+                        y: e.offsetY - previousMousePosition.y
+                    };
+
+                    molecule.rotation.y += deltaMove.x * 0.01;
+                    molecule.rotation.x += deltaMove.y * 0.01;
+                }
+
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+
+            renderer.domElement.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            window.addEventListener('resize', onWindowResize, false);
+            
+            // Keyboard controls for zoom
+            window.addEventListener('keydown', (e) => {
+                if (e.key === '+' || e.key === '=') {
+                    zoomIn();
+                } else if (e.key === '-' || e.key === '_') {
+                    zoomOut();
+                }
+            });
+            
+            // Load default molecule
+            loadPreset('water');
+            updatePlaceholder();
+        }
+
+        function renderMolecule() {
+            // Clear existing molecule
+            while (molecule.children.length > 0) {
+                molecule.remove(molecule.children[0]);
+            }
+            labelSprites = [];
+            angleSprites = [];
+            angleArcs = [];
+            bondLengthLabels = [];
+            
+            if (currentAtoms.length === 0) return;
+
+            // Calculate the bounds of a single molecule for spacing
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+            
+            currentAtoms.forEach(atom => {
+                minX = Math.min(minX, atom.x);
+                maxX = Math.max(maxX, atom.x);
+                minY = Math.min(minY, atom.y);
+                maxY = Math.max(maxY, atom.y);
+                minZ = Math.min(minZ, atom.z);
+                maxZ = Math.max(maxZ, atom.z);
+            });
+            
+            const molWidth = maxX - minX;
+            const molHeight = maxY - minY;
+            const molDepth = maxZ - minZ;
+            
+            // Create lattice of molecules
+            for (let ix = 0; ix < xRepeat; ix++) {
+                for (let iy = 0; iy < yRepeat; iy++) {
+                    for (let iz = 0; iz < zRepeat; iz++) {
+                        const offsetX = ix * (molWidth + latticeSpacing);
+                        const offsetY = iy * (molHeight + latticeSpacing);
+                        const offsetZ = iz * (molDepth + latticeSpacing);
+                        
+                        // Create atoms for this lattice position
+                        currentAtoms.forEach((atom, index) => {
+                            const color = atomColors[atom.element] || atomColors['DEFAULT'];
+                            const size = atomSizes[atom.element] || atomSizes['DEFAULT'];
+                            
+                            const geometry = new THREE.SphereGeometry(size, 32, 32);
+                            const material = new THREE.MeshPhongMaterial({
+                                color: color,
+                                shininess: 80,
+                                specular: 0x444444
+                            });
+                            const sphere = new THREE.Mesh(geometry, material);
+                            sphere.position.set(
+                                atom.x + offsetX, 
+                                atom.y + offsetY, 
+                                atom.z + offsetZ
+                            );
+                            molecule.add(sphere);
+
+                            // Only add labels to the first molecule to avoid clutter
+                            if (ix === 0 && iy === 0 && iz === 0) {
+                                createLabel(atom.element, atom.x, atom.y, atom.z);
+                            }
+                        });
+
+                        // Create bonds for this lattice position
+                        currentBonds.forEach(bond => {
+                            const atom1 = currentAtoms[bond[0]];
+                            const atom2 = currentAtoms[bond[1]];
+                            
+                            const start = new THREE.Vector3(
+                                atom1.x + offsetX, 
+                                atom1.y + offsetY, 
+                                atom1.z + offsetZ
+                            );
+                            const end = new THREE.Vector3(
+                                atom2.x + offsetX, 
+                                atom2.y + offsetY, 
+                                atom2.z + offsetZ
+                            );
+                            
+                            const direction = new THREE.Vector3().subVectors(end, start);
+                            const length = direction.length();
+                            
+                            const geometry = new THREE.CylinderGeometry(0.04, 0.04, length, 8);
+                            const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
+                            const cylinder = new THREE.Mesh(geometry, material);
+                            
+                            cylinder.position.copy(start).add(direction.multiplyScalar(0.5));
+                            cylinder.quaternion.setFromUnitVectors(
+                                new THREE.Vector3(0, 1, 0),
+                                direction.normalize()
+                            );
+                            
+                            molecule.add(cylinder);
+                        });
+                    }
+                }
+            }
+
+            // Center the entire lattice
+            const box = new THREE.Box3().setFromObject(molecule);
+            const center = box.getCenter(new THREE.Vector3());
+            molecule.position.sub(center);
+            
+            // Update info display
+            const totalMolecules = xRepeat * yRepeat * zRepeat;
+            const totalAtoms = currentAtoms.length * totalMolecules;
+            const totalBonds = currentBonds.length * totalMolecules;
+            
+            document.getElementById('molAtoms').textContent = `Atoms: ${totalAtoms} (${currentAtoms.length} × ${totalMolecules})`;
+            document.getElementById('molBonds').textContent = `Bonds: ${totalBonds} (${currentBonds.length} × ${totalMolecules})`;
+        }
+
+        function createLabel(text, x, y, z) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 64;
+            canvas.height = 32;
+            
+            context.fillStyle = 'rgba(0, 0, 0, 0.85)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add border for better visibility
+            context.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            context.lineWidth = 1;
+            context.strokeRect(0, 0, canvas.width, canvas.height);
+            
+            context.font = 'Bold 20px Arial';
+            context.fillStyle = 'white';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, canvas.width / 2, canvas.height / 2);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(material);
+            sprite.position.set(x, y, z + 0.5);
+            sprite.scale.set(0.5, 0.25, 1);
+            sprite.visible = showLabels;
+            
+            molecule.add(sprite);
+            labelSprites.push(sprite);
+        }
+
+        function toggleRotation() {
+            autoRotate = !autoRotate;
+        }
+
+        function resetView() {
+            molecule.rotation.set(0, 0, 0);
+            autoRotate = true;
+        }
+
+        function toggleLabels() {
+            showLabels = !showLabels;
+            labelSprites.forEach(sprite => {
+                sprite.visible = showLabels;
+            });
+        }
+
+        function calculateAngle(atom1, centerAtom, atom2) {
+            const v1 = new THREE.Vector3(
+                atom1.x - centerAtom.x,
+                atom1.y - centerAtom.y,
+                atom1.z - centerAtom.z
+            ).normalize();
+            
+            const v2 = new THREE.Vector3(
+                atom2.x - centerAtom.x,
+                atom2.y - centerAtom.y,
+                atom2.z - centerAtom.z
+            ).normalize();
+            
+            const dotProduct = Math.max(-1, Math.min(1, v1.dot(v2)));
+            const angle = Math.acos(dotProduct);
+            return angle * (180 / Math.PI);
+        }
+
+        function calculateBondLength(atom1, atom2) {
+            const dx = atom2.x - atom1.x;
+            const dy = atom2.y - atom1.y;
+            const dz = atom2.z - atom1.z;
+            return Math.sqrt(dx*dx + dy*dy + dz*dz);
+        }
+
+        function toggleAngles() {
+            showAngles = !showAngles;
+            const btn = document.getElementById('angleBtn');
+            
+            if (showAngles) {
+                btn.textContent = 'Hide Angles';
+                btn.classList.add('active');
+                
+                // Find all bond angles
+                const anglesList = [];
+                currentBonds.forEach((bond, idx) => {
+                    currentBonds.forEach((bond2, idx2) => {
+                        if (idx >= idx2) return;
+                        
+                        // Check if bonds share an atom
+                        const sharedAtom = bond.find(a => bond2.includes(a));
+                        if (sharedAtom !== undefined) {
+                            const atom1 = bond.find(a => a !== sharedAtom);
+                            const atom2 = bond2.find(a => a !== sharedAtom);
+                            anglesList.push({ center: sharedAtom, a1: atom1, a2: atom2 });
+                        }
+                    });
+                });
+                
+                anglesList.forEach(angleData => {
+                    const centerAtom = currentAtoms[angleData.center];
+                    const atom1 = currentAtoms[angleData.a1];
+                    const atom2 = currentAtoms[angleData.a2];
+                    
+                    const angleDegrees = calculateAngle(atom1, centerAtom, atom2);
+                    
+                    // Create label
+                    const v1 = new THREE.Vector3(
+                        atom1.x - centerAtom.x,
+                        atom1.y - centerAtom.y,
+                        atom1.z - centerAtom.z
+                    ).normalize();
+                    
+                    const v2 = new THREE.Vector3(
+                        atom2.x - centerAtom.x,
+                        atom2.y - centerAtom.y,
+                        atom2.z - centerAtom.z
+                    ).normalize();
+                    
+                    const midVec = new THREE.Vector3()
+                        .addVectors(v1, v2)
+                        .normalize()
+                        .multiplyScalar(0.7);
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = 100;
+                    canvas.height = 35;
+                    
+                    context.fillStyle = 'rgba(255, 200, 0, 0.9)';
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    context.font = 'Bold 16px Arial';
+                    context.fillStyle = 'black';
+                    context.textAlign = 'center';
+                    context.textBaseline = 'middle';
+                    context.fillText(`${angleDegrees.toFixed(1)}°`, canvas.width / 2, canvas.height / 2);
+                    
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+                    const sprite = new THREE.Sprite(material);
+                    sprite.position.set(
+                        centerAtom.x + midVec.x,
+                        centerAtom.y + midVec.y,
+                        centerAtom.z + midVec.z
+                    );
+                    sprite.scale.set(0.7, 0.25, 1);
+                    
+                    molecule.add(sprite);
+                    angleSprites.push(sprite);
+                });
+            } else {
+                btn.textContent = 'Angles';
+                btn.classList.remove('active');
+                
+                angleSprites.forEach(sprite => molecule.remove(sprite));
+                angleSprites = [];
+            }
+        }
+
+        function toggleBondLengths() {
+            showBondLengths = !showBondLengths;
+            const btn = document.getElementById('bondBtn');
+            
+            if (showBondLengths) {
+                btn.textContent = 'Hide Bonds';
+                btn.classList.add('active');
+                
+                currentBonds.forEach(bond => {
+                    const atom1 = currentAtoms[bond[0]];
+                    const atom2 = currentAtoms[bond[1]];
+                    const length = calculateBondLength(atom1, atom2);
+                    
+                    const midX = (atom1.x + atom2.x) / 2;
+                    const midY = (atom1.y + atom2.y) / 2;
+                    const midZ = (atom1.z + atom2.z) / 2;
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = 90;
+                    canvas.height = 30;
+                    
+                    context.fillStyle = 'rgba(0, 200, 255, 0.9)';
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    context.font = 'Bold 14px Arial';
+                    context.fillStyle = 'black';
+                    context.textAlign = 'center';
+                    context.textBaseline = 'middle';
+                    context.fillText(`${length.toFixed(2)} Å`, canvas.width / 2, canvas.height / 2);
+                    
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+                    const sprite = new THREE.Sprite(material);
+                    sprite.position.set(midX, midY, midZ + 0.25);
+                    sprite.scale.set(0.6, 0.2, 1);
+                    
+                    molecule.add(sprite);
+                    bondLengthLabels.push(sprite);
+                });
+            } else {
+                btn.textContent = 'Bonds';
+                btn.classList.remove('active');
+                
+                bondLengthLabels.forEach(label => molecule.remove(label));
+                bondLengthLabels = [];
+            }
+        }
+
+        function zoomIn() {
+            camera.position.z = Math.max(3, camera.position.z - 2);
+        }
+
+        function zoomOut() {
+            camera.position.z = Math.min(50, camera.position.z + 2);
+        }
+
+        function updateLattice() {
+            xRepeat = parseInt(document.getElementById('xRepeat').value);
+            yRepeat = parseInt(document.getElementById('yRepeat').value);
+            zRepeat = parseInt(document.getElementById('zRepeat').value);
+            latticeSpacing = parseFloat(document.getElementById('spacing').value);
+            
+            document.getElementById('xValue').textContent = xRepeat;
+            document.getElementById('yValue').textContent = yRepeat;
+            document.getElementById('zValue').textContent = zRepeat;
+            document.getElementById('spacingValue').textContent = latticeSpacing.toFixed(1);
+            
+            if (currentAtoms.length > 0) {
+                renderMolecule();
+            }
+        }
+
+        function resetLattice() {
+            xRepeat = 1;
+            yRepeat = 1;
+            zRepeat = 1;
+            latticeSpacing = 5.0;
+            
+            document.getElementById('xRepeat').value = 1;
+            document.getElementById('yRepeat').value = 1;
+            document.getElementById('zRepeat').value = 1;
+            document.getElementById('spacing').value = 5.0;
+            
+            document.getElementById('xValue').textContent = 1;
+            document.getElementById('yValue').textContent = 1;
+            document.getElementById('zValue').textContent = 1;
+            document.getElementById('spacingValue').textContent = '5.0';
+            
+            if (currentAtoms.length > 0) {
+                renderMolecule();
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (autoRotate) {
+                molecule.rotation.y += 0.005;
+                molecule.rotation.x += 0.002;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
